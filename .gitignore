@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+*.db
+*.sqlite
+qdrant_data/
+
+# Models
+models/
+*.onnx
+*.bin
+*.safetensors
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# Audio temp
+*.wav
+*.mp3
+recordings/
+
+# Sessions
+sessions/
