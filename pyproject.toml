@@ -1,12 +1,12 @@
 [project]
-name = "loopagi"
-version = "2.0.0"
-description = "Open Source Multi-Agent AGI System - 13 agents with voice"
+name = "god-in-the-loop-code"
+version = "1.0.0"
+description = "Companion code for God in the Loop by Alexandros Karales"
 authors = [
     { name = "Alexandros Karales", email = "karales@gmail.com" }
 ]
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = { text = "All Rights Reserved" }
 readme = "README.md"
 
 dependencies = [
@@ -22,15 +22,10 @@ dependencies = [
     "rich",
     "gitpython",
     "httpx",
+    "polars>=1.39.2",
 ]
 
 [project.optional-dependencies]
-voice = [
-    "faster-whisper",
-    "piper-tts",
-    "sounddevice",
-    "soundfile",
-]
 notebooks = [
     "jupyter",
     "ipywidgets",

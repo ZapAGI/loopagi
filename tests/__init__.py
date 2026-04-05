@@ -1,1 +1,1 @@
-"""LoopAGI test suite."""
+"""Tests for LoopAGI capstone modules."""

@@ -1,0 +1,22 @@
+## Code Style
+- Use type hints on all functions
+- Prefer composition over inheritance
+- Maximum line length: 100 characters
+- Use dataclasses for data containers
+
+## Testing
+- Every public function needs at least one test
+- Use pytest, not unittest
+- Minimum 80% code coverage
+- Test edge cases and error conditions
+
+## Git
+- Commit messages: imperative mood, 50 char subject
+- Feature branches off main
+- Squash merge to main
+
+## Architecture
+- No circular imports
+- Keep modules under 300 lines
+- Use dependency injection over globals
+- Separate concerns: data, logic, presentation

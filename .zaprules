@@ -1,0 +1,35 @@
+## Code Style
+- Use type hints on all functions
+- Prefer composition over inheritance
+- Maximum line length: 100 characters
+- Use dataclasses for simple data containers
+- Use f-strings over .format() or % formatting
+
+## Testing
+- Every public function needs at least one test
+- Use pytest, not unittest
+- Test edge cases and error conditions
+- Aim for 80% code coverage minimum
+
+## Git
+- Commit messages: imperative mood, 50 char subject line
+- Feature branches off main
+- Squash merge to main
+
+## Architecture
+- No circular imports
+- Use dependency injection over globals
+- Separate concerns: data, logic, presentation
+
+## Module Size (Tiered)
+- Standard tier (300 lines max): application logic, agents, tools, CLI, stateful code
+- Extended tier (500 lines max): DSL primitives, data loaders, pure utility modules
+- Hard ceiling: NO file may exceed 500 lines, period
+- Extended tier requires: pure functions only, single semantic domain, full test coverage
+- See DSL_FILE_SIZE_RESEARCH.md for rationale and references
+
+## Security
+- Never execute commands without safety checking
+- Always validate user input before processing
+- Never store secrets in source code
+- Log all tool executions for audit trail

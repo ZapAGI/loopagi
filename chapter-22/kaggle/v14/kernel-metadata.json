@@ -1,0 +1,23 @@
+{
+  "id": "karales/arc-prize-2026-arc-agi-2-submission",
+  "title": "arc-prize-2026-arc-agi-2-submission",
+  "code_file": "notebook.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": false,
+  "competition_sources": [
+    "arc-prize-2026-arc-agi-2"
+  ],
+  "dataset_sources": [
+    "karales/loopagi-arc-solver",
+    "mavicbf/qwen3-8b-unsloth-4bit-quantized"
+  ],
+  "keywords": [
+    "arc-agi",
+    "transduction",
+    "qwen3",
+    "d4-voting"
+  ]
+}
