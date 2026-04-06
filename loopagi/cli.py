@@ -28,7 +28,10 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 
+from loopagi.agents.debugger import DEBUGGER_ROLE
+from loopagi.agents.documenter import DOCUMENTER_ROLE
 from loopagi.core.agent import Agent
+from loopagi.core.config import LoopAGIConfig
 from loopagi.core.events import BackgroundAgent, Event, EventBus
 from loopagi.core.router import Router
 from loopagi.knowledge.context import ActionTracker, RulesParser
@@ -52,7 +55,7 @@ BANNER = r"""
  |_____\___/ \___/| .__/_/   \_\____|___|
                    |_|
 
-  God in the Loop - Companion Capstone
+  LoopAGI - 13 Agent Multi-Agent System
   Built progressively across 22 chapters
 """
 
@@ -111,21 +114,56 @@ class LoopAGI:
     - Action tracking (Ch 10)
     """
 
-    def __init__(self, model: str = "llama3.2", mode: str = "turbo") -> None:
-        self.model = model
+    def __init__(self, model: str = "llama3.2", mode: str = "turbo", voice: bool = False) -> None:
+        # Load TOML config (overrides CLI defaults if file exists)
+        self.config = LoopAGIConfig.load()
+        self.model = model if model != "llama3.2" else self.config.model
+        self.voice_mode = voice or self.config.voice.enabled
         self._last_response = ""
         self._context_files: dict[str, str] = {}  # path -> content
         self._conversation: list[dict] = []  # for /export
         self._project_dir = str(Path.cwd())
 
         # Verify Ollama is reachable
-        self._check_ollama(model)
+        self._check_ollama(self.model)
 
-        # Ch 4: Create specialist agents (7 agents)
-        agents = self._create_agents(model)
+        # Ch 4: Create specialist agents (9 text agents, per-agent models from config)
+        agents = self._create_agents(self.model, self.config)
 
-        # Ch 5: Hierarchical routing
-        self.router = Router(agents=agents)
+        # Knowledge and memory agents (wrapping existing stores)
+        from loopagi.agents.knowledge_agent import KnowledgeAgent
+        from loopagi.agents.memory_agent import MemoryAgent
+
+        self.knowledge_agent = KnowledgeAgent(model=model)
+        self.memory_agent = MemoryAgent(model=model)
+        agents.append(self.knowledge_agent)
+        agents.append(self.memory_agent)
+
+        # Voice agents (listener + speaker)
+        self.listener_agent = None
+        self.speaker_agent = None
+        if voice:
+            try:
+                from loopagi.agents.listener import ListenerAgent
+                from loopagi.agents.speaker import SpeakerAgent
+
+                self.listener_agent = ListenerAgent()
+                self.speaker_agent = SpeakerAgent()
+                agents.append(self.listener_agent)
+                agents.append(self.speaker_agent)
+                console.print("[green]Voice mode enabled[/green]")
+            except Exception as e:
+                console.print(f"[yellow]Voice mode unavailable: {e}[/yellow]")
+                self.voice_mode = False
+
+        # Ch 5: Hierarchical routing (3-phase: keyword → embedding → LLM)
+        self.router = Router(
+            agents=agents,
+            keyword_threshold=self.config.routing.keyword_threshold,
+            embedding_threshold=self.config.routing.embedding_threshold,
+            enable_embedding=self.config.routing.enable_embedding,
+            embedding_model=self.config.routing.embedding_model,
+        )
 
         # Ch 10: Context engine
         self.tracker = ActionTracker()
@@ -154,77 +192,64 @@ class LoopAGI:
         self.tools.register(WebSearchTool())
 
     @staticmethod
-    def _create_agents(model: str) -> list[Agent]:
-        """Create all specialist agents."""
-        return [
-            Agent(
-                name="coder",
-                role=(
-                    "You are an expert Python coding specialist. Write clean, "
-                    "well-documented Python code. Use type hints, docstrings, and "
-                    "follow PEP 8. Output code in fenced code blocks. When editing "
-                    "existing code, show the complete modified file."
-                ),
-                model=model,
-            ),
-            Agent(
-                name="researcher",
-                role=(
-                    "You are a research specialist. Explain concepts clearly and "
-                    "thoroughly. Provide examples, analogies, and references. "
-                    "When comparing options, use tables. Be thorough but concise."
-                ),
-                model=model,
-            ),
-            Agent(
-                name="planner",
-                role=(
-                    "You are a software architect and planner. Create clear, "
-                    "step-by-step implementation plans. Consider edge cases, "
-                    "testing strategies, and architectural decisions. Use numbered "
-                    "lists and break complex tasks into subtasks."
-                ),
-                model=model,
-            ),
-            Agent(
-                name="tester",
-                role=(
-                    "You are a testing specialist. Write comprehensive pytest tests "
-                    "that cover: happy path, edge cases, error conditions, and "
-                    "boundary values. Use fixtures, parametrize, and clear assertions. "
-                    "Output test code in fenced code blocks."
-                ),
-                model=model,
-            ),
-            Agent(
-                name="reviewer",
-                role=(
-                    "You are a senior code reviewer. Evaluate code for: correctness, "
-                    "style, edge cases, performance, security, and maintainability. "
-                    "Be specific and actionable. Start with what is good, then "
-                    "suggest improvements. Rate overall quality 1-10."
-                ),
-                model=model,
-            ),
-            Agent(
-                name="fileops",
-                role=(
-                    "You are a file operations specialist. Help with file management, "
-                    "directory organization, finding files, analyzing project structure, "
-                    "and file content analysis. Be precise about paths."
-                ),
-                model=model,
-            ),
-            Agent(
-                name="devops",
-                role=(
-                    "You are a DevOps specialist. Help with git workflows, CI/CD, "
-                    "Docker, deployment, environment setup, and infrastructure. "
-                    "Provide exact commands. Prefer local-first solutions."
-                ),
-                model=model,
-            ),
+    def _create_agents(model: str, config: LoopAGIConfig | None = None) -> list[Agent]:
+        """Create all specialist agents with per-agent model overrides."""
+        def _model(name: str) -> str:
+            if config:
+                return config.get_agent_model(name)
+            return model
+
+        agent_defs = [
+            ("coder", (
+                "You are an expert Python coding specialist. Write clean, "
+                "well-documented Python code. Use type hints, docstrings, and "
+                "follow PEP 8. Output code in fenced code blocks. When editing "
+                "existing code, show the complete modified file."
+            )),
+            ("researcher", (
+                "You are a research specialist. Explain concepts clearly and "
+                "thoroughly. Provide examples, analogies, and references. "
+                "When comparing options, use tables. Be thorough but concise."
+            )),
+            ("planner", (
+                "You are a software architect and planner. Create clear, "
+                "step-by-step implementation plans. Consider edge cases, "
+                "testing strategies, and architectural decisions. Use numbered "
+                "lists and break complex tasks into subtasks."
+            )),
+            ("tester", (
+                "You are a testing specialist. Write comprehensive pytest tests "
+                "that cover: happy path, edge cases, error conditions, and "
+                "boundary values. Use fixtures, parametrize, and clear assertions. "
+                "Output test code in fenced code blocks."
+            )),
+            ("reviewer", (
+                "You are a senior code reviewer. Evaluate code for: correctness, "
+                "style, edge cases, performance, security, and maintainability. "
+                "Be specific and actionable. Start with what is good, then "
+                "suggest improvements. Rate overall quality 1-10."
+            )),
+            ("fileops", (
+                "You are a file operations specialist. Help with file management, "
+                "directory organization, finding files, analyzing project structure, "
+                "and file content analysis. Be precise about paths."
+            )),
+            ("devops", (
+                "You are a DevOps specialist. Help with git workflows, CI/CD, "
+                "Docker, deployment, environment setup, and infrastructure. "
+                "Provide exact commands. Prefer local-first solutions."
+            )),
+            ("debugger", DEBUGGER_ROLE),
+            ("documenter", DOCUMENTER_ROLE),
         ]
+
+        agents = []
+        for name, role in agent_defs:
+            # Skip disabled agents
+            if config and not config.is_agent_enabled(name):
+                continue
+            agents.append(Agent(name=name, role=role, model=_model(name)))
+        return agents
 
     @staticmethod
     def _check_ollama(model: str) -> None:
@@ -691,11 +716,22 @@ class LoopAGI:
             f"Tools: [bold]{len(self.tools.list_tools())}[/bold]"
         )
         console.print(f"Project: [dim]{self._project_dir}[/dim]")
+        if self.voice_mode:
+            console.print("[bold green]Voice mode ON[/bold green] - say 'listen' to use mic")
         console.print("Type [bold]/help[/bold] for commands, or just start talking.\n")
 
         while True:
             try:
-                user_input = console.input("[bold green]you>[/bold green] ").strip()
+                # Voice input mode: capture from microphone
+                if self.voice_mode and self.listener_agent:
+                    console.print("[dim]Listening...[/dim]")
+                    user_input = self.listener_agent.invoke("listen 5")
+                    if user_input.startswith("(") or user_input.startswith("No ") or user_input.startswith("Voice"):
+                        console.print(f"[yellow]{user_input}[/yellow]")
+                        continue
+                    console.print(f"[bold green]you>[/bold green] {user_input}")
+                else:
+                    user_input = console.input("[bold green]you>[/bold green] ").strip()
                 if not user_input:
                     continue
 
@@ -713,6 +749,13 @@ class LoopAGI:
                     padding=(1, 2),
                 ))
                 console.print()
+
+                # Voice output: speak the response
+                if self.voice_mode and self.speaker_agent:
+                    # Strip Rich markup for TTS
+                    import re
+                    clean = re.sub(r"\[.*?\]", "", response)
+                    self.speaker_agent.invoke(f"say {clean[:500]}")
 
             except KeyboardInterrupt:
                 console.print("\n\n[dim]The cursor blinks.[/dim]\n")
@@ -743,6 +786,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable verbose logging",
     )
+    parser.add_argument(
+        "--voice",
+        action="store_true",
+        help="Enable voice mode (requires faster-whisper + piper-tts)",
+    )
     return parser.parse_args()
 
 
@@ -760,7 +808,7 @@ def main() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-    app = LoopAGI(model=args.model, mode=args.mode)
+    app = LoopAGI(model=args.model, mode=args.mode, voice=args.voice)
     app.run()
 
 

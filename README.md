@@ -1,4 +1,4 @@
-# God in the Loop - Companion Code
+# LoopAGI - 13 Agent Multi-Agent System
 
 **Working Python code for every chapter of *God in the Loop: Consciousness, Control, and the Architecture of Artificial General Intelligence* by Alexandros Karales.**
 
@@ -6,9 +6,10 @@
 
 ## The Capstone: LoopAGI
 
-This repository is not just a collection of isolated examples. Across 22 chapters, you progressively build **LoopAGI**, a fully functional mini multi-agent AGI system. Each chapter contributes a real component. By the end, you have a working system with:
+This repository is not just a collection of isolated examples. Across 22 chapters, you progressively build **LoopAGI**, a fully functional 13-agent multi-agent system with voice I/O. Each chapter contributes a real component. By the end, you have a working system with:
 
-- **Multi-agent orchestration** with hierarchical routing (Ch 4-5)
+- **13 specialist agents** with per-agent model configuration
+- **3-phase routing**: keyword → embedding similarity → LLM classification (Ch 5)
 - **Agent pools** for parallel execution (Ch 6)
 - **Quality pipeline**: plan, code, test, review (Ch 7)
 - **Persistent memory** with vector search (Ch 8)
@@ -18,8 +19,28 @@ This repository is not just a collection of isolated examples. Across 22 chapter
 - **Command safety** and trust scoring (Ch 12)
 - **Event-driven background agents** (Ch 13)
 - **Careful mode** with approval workflows (Ch 14)
+- **Voice I/O**: local STT (faster-whisper) and TTS (piper-tts)
+- **TOML configuration** for per-agent model overrides
 - **Session-as-git** provenance logging (Ch 18)
-- **Tool integration**: shell, files, Docker (Ch 19)
+- **Tool integration**: shell, files, git, search, web (Ch 19)
+
+### The 13 Agents
+
+| Agent | Role | Default Model |
+|-------|------|---------------|
+| **coder** | Python coding specialist | qwen2.5-coder:14b |
+| **tester** | Test writing specialist | qwen2.5-coder:14b |
+| **reviewer** | Code review specialist | qwen3:14b |
+| **planner** | Architecture and planning | qwen3:14b |
+| **researcher** | Research and explanation | qwen3:14b |
+| **fileops** | File operations | qwen3:8b |
+| **devops** | Git, CI/CD, infrastructure | qwen3:8b |
+| **debugger** | Root cause analysis, bug fixing | qwen2.5-coder:14b |
+| **documenter** | Documentation generation | qwen3:14b |
+| **knowledge** | RAG-powered knowledge retrieval | qwen3:8b |
+| **memory** | Long-term memory storage/recall | qwen3:8b |
+| **listener** | Voice input (STT) | faster-whisper base.en |
+| **speaker** | Voice output (TTS) | piper en_US-lessac-medium |
 
 ### Progressive Build Map
 
@@ -57,15 +78,23 @@ All code runs locally. No API keys required. No data leaves your machine.
 
 ```bash
 # Clone the companion repo
-git clone git@github.com:ZapAGI/god-in-the-loop-code.git
-cd god-in-the-loop-code
+git clone git@github.com:ZapAGI/loopagi.git
+cd loopagi
 
 # Install dependencies
 uv sync
 
 # Pull required Ollama models
 ollama pull llama3.2
-ollama pull nomic-embed-text
+ollama pull qwen2.5-coder:14b
+ollama pull qwen3:14b
+ollama pull qwen3:8b
+
+# Optional: install voice dependencies
+uv sync --extra voice
+
+# Optional: copy and customize config
+cp loopagi.toml.example loopagi.toml
 ```
 
 ## Running Examples
@@ -86,11 +115,20 @@ uv run jupyter lab
 After completing all chapters, run the full LoopAGI system:
 
 ```bash
-# Interactive CLI
+# Interactive CLI (13 agents, 3-phase routing)
 uv run loopagi
 
-# Or run directly
-uv run python -m loopagi.cli
+# Specify a model
+uv run loopagi --model qwen3:14b
+
+# Careful mode (requires approval for actions)
+uv run loopagi --mode careful
+
+# Voice mode (requires faster-whisper + piper-tts)
+uv run loopagi --voice
+
+# Verbose logging
+uv run loopagi --verbose
 ```
 
 ---
@@ -98,18 +136,29 @@ uv run python -m loopagi.cli
 ## Repository Structure
 
 ```
-god-in-the-loop-code/
-  loopagi/                  # Capstone MVP - built progressively across chapters
+loopagi/
+  loopagi/                  # 13-agent system - built progressively across chapters
     __init__.py
-    cli.py                  # Ch 23: Final CLI assembly
+    cli.py                  # Ch 22: Final CLI assembly
     core/                   # Agent infrastructure
       agent.py              # Ch 4:  Base Agent with Ollama
-      router.py             # Ch 5:  Hierarchical routing
+      router.py             # Ch 5:  3-phase routing (keyword → embedding → LLM)
+      config.py             # TOML-based per-agent configuration
       pool.py               # Ch 6:  Agent pools
       pipeline.py           # Ch 7:  Quality pipeline
       events.py             # Ch 13: Event bus & background agents
       session.py            # Ch 18: Session-as-git provenance
       ollama_utils.py       # Ollama helpers & mock agents
+    agents/                 # Specialist agent definitions
+      debugger.py           # Root cause analysis, bug fixing
+      documenter.py         # Documentation generation
+      knowledge_agent.py    # RAG-powered knowledge retrieval
+      memory_agent.py       # Long-term memory storage/recall
+      listener.py           # Voice input agent (STT)
+      speaker.py            # Voice output agent (TTS)
+    voice/                  # Voice I/O modules
+      listener.py           # Microphone capture + faster-whisper
+      speaker.py            # Piper-tts synthesis + audio playback
     knowledge/              # Memory, RAG, and context
       memory.py             # Ch 8:  Persistent vector memory
       rag.py                # Ch 9:  RAG retrieval

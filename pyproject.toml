@@ -30,6 +30,13 @@ notebooks = [
     "jupyter",
     "ipywidgets",
 ]
+voice = [
+    "faster-whisper",
+    "piper-tts",
+    "sounddevice",
+    "soundfile",
+    "numpy",
+]
 dev = [
     "pytest",
     "ruff",

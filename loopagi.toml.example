@@ -1,0 +1,62 @@
+# LoopAGI Configuration
+# Copy to loopagi.toml and customize as needed.
+
+[loopagi]
+model = "llama3.2"       # Default model for all agents
+mode = "turbo"           # "turbo" (autonomous) or "careful" (approval required)
+
+[voice]
+enabled = false          # Enable voice I/O (requires faster-whisper + piper-tts)
+stt_model = "base.en"    # Whisper model size: tiny.en, base.en, small.en, medium.en
+stt_device = "cpu"       # "cpu" or "cuda"
+tts_voice = "en_US-lessac-medium"  # Piper voice model
+
+[routing]
+keyword_threshold = 0.3          # Min confidence for keyword routing
+embedding_model = "BAAI/bge-small-en-v1.5"  # Sentence embedding model
+embedding_threshold = 0.5        # Min similarity for embedding routing
+enable_embedding = true          # Enable embedding-based routing (Phase 2)
+
+# Per-agent model overrides
+# Each agent inherits the global model unless overridden here.
+# Set enabled = false to disable an agent.
+
+[agents.coder]
+model = "qwen2.5-coder:14b"
+temperature = 0.3
+
+[agents.tester]
+model = "qwen2.5-coder:14b"
+temperature = 0.3
+
+[agents.reviewer]
+model = "qwen3:14b"
+temperature = 0.5
+
+[agents.planner]
+model = "qwen3:14b"
+temperature = 0.5
+
+[agents.researcher]
+model = "qwen3:14b"
+temperature = 0.7
+
+[agents.fileops]
+model = "qwen3:8b"
+
+[agents.devops]
+model = "qwen3:8b"
+
+[agents.debugger]
+model = "qwen2.5-coder:14b"
+temperature = 0.3
+
+[agents.documenter]
+model = "qwen3:14b"
+temperature = 0.7
+
+[agents.knowledge]
+model = "qwen3:8b"
+
+[agents.memory]
+model = "qwen3:8b"
