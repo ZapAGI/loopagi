@@ -2,45 +2,60 @@
 
 **Working Python code for every chapter of *God in the Loop: Consciousness, Control, and the Architecture of Artificial General Intelligence* by Alexandros Karales.**
 
+> **Branch: `book/v1-7-agents`** — 7-agent tutorial capstone (frozen for Volume 1).
+> For the full 13-agent system with voice I/O, see branch `book/v2-13-agents`.
+
 ---
 
-## The Capstone: LoopAGI
+## The Capstone: LoopAGI (7 Agents)
 
-This repository is not just a collection of isolated examples. Across 22 chapters, you progressively build **LoopAGI**, a fully functional mini multi-agent AGI system. Each chapter contributes a real component. By the end, you have a working system with:
+Across 22 chapters, you progressively build **LoopAGI**, a fully functional multi-agent system. Each chapter contributes a real component:
 
-- **Multi-agent orchestration** with hierarchical routing (Ch 4-5)
+- **7 specialist agents** with keyword-based routing (Ch 4-5)
 - **Agent pools** for parallel execution (Ch 6)
 - **Quality pipeline**: plan, code, test, review (Ch 7)
 - **Persistent memory** with vector search (Ch 8)
-- **RAG-powered knowledge retrieval** (Ch 9)
+- **RAG-powered knowledge retrieval** with 12 strategies (Ch 9)
 - **Context engine** with rules, action tracking, and repo mapping (Ch 10)
 - **Human-in-the-loop** execution modes (Ch 11)
 - **Command safety** and trust scoring (Ch 12)
 - **Event-driven background agents** (Ch 13)
 - **Careful mode** with approval workflows (Ch 14)
 - **Session-as-git** provenance logging (Ch 18)
-- **Tool integration**: shell, files, Docker (Ch 19)
+- **Tool integration**: shell, files, git, search, web (Ch 19)
+- **ARC-AGI** reasoning engine with 5 specialist agents (Ch 21)
+
+### The 7 Agents
+
+| Agent | Role | Keywords |
+|-------|------|----------|
+| **coder** | Python coding specialist | write, code, implement, function, class |
+| **tester** | Test writing specialist | test, assert, coverage, pytest, verify |
+| **reviewer** | Code review specialist | review, critique, improve, quality |
+| **planner** | Architecture and planning | plan, design, architect, outline |
+| **researcher** | Research and explanation | research, explain, compare, analyze |
+| **fileops** | File operations | file, directory, move, copy, rename |
+| **devops** | Git, CI/CD, infrastructure | git, commit, deploy, docker, ci |
 
 ### Progressive Build Map
 
 | Chapter | LoopAGI Module | What You Build |
 |---------|---------------|----------------|
-| 4 | `loopagi/agent.py` | Base Agent class with Ollama LLM |
-| 5 | `loopagi/router.py` | Hierarchical routing (Master to Workers) |
-| 6 | `loopagi/pool.py` | Agent pools for parallel execution |
-| 7 | `loopagi/pipeline.py` | Quality pipeline (plan/code/test/review) |
-| 8 | `loopagi/memory.py` | Persistent memory with Qdrant vectors |
-| 9 | `loopagi/rag.py` | RAG-powered knowledge retrieval |
-| 10 | `loopagi/context.py` | Context engine (rules, actions, repo map) |
-| 11 | `loopagi/modes.py` | Execution modes (Zap/Careful) |
-| 12 | `loopagi/safety.py` | Command safety checker and trust scoring |
-| 13 | `loopagi/events.py` | Event bus and background agents |
-| 14 | `loopagi/careful.py` | Careful mode approval workflows |
-| 18 | `loopagi/session.py` | Session-as-git provenance logging |
-| 19 | `loopagi/tools.py` | Tool integration (shell, files, Docker) |
+| 4 | `loopagi/core/agent.py` | Base Agent class with Ollama LLM |
+| 5 | `loopagi/core/router.py` | Hierarchical routing (Master → Workers) |
+| 6 | `loopagi/core/pool.py` | Agent pools for parallel execution |
+| 7 | `loopagi/core/pipeline.py` | Quality pipeline (plan/code/test/review) |
+| 8 | `loopagi/knowledge/memory.py` | Persistent memory with Qdrant vectors |
+| 9 | `loopagi/knowledge/rag.py` | RAG-powered knowledge retrieval |
+| 10 | `loopagi/knowledge/context.py` | Context engine (rules, actions, repo map) |
+| 11 | `loopagi/safety/modes.py` | Execution modes (Turbo/Careful) |
+| 12 | `loopagi/safety/checker.py` | Command safety checker and trust scoring |
+| 13 | `loopagi/core/events.py` | Event bus and background agents |
+| 14 | `loopagi/safety/careful.py` | Careful mode approval workflows |
+| 18 | `loopagi/core/session.py` | Session-as-git provenance logging |
+| 19 | `loopagi/tools/base.py` | Tool integration (shell, file, registry) |
 | 21 | `loopagi/arc/` | ARC-AGI reasoning engine (5 specialists) |
-| 22 | `loopagi/cli.py` | Emergence thesis simulations |
-| 23 | `loopagi/cli.py` | Final CLI that assembles everything |
+| 22 | `loopagi/cli.py` | Final CLI that assembles everything |
 
 ---
 
@@ -50,31 +65,41 @@ This repository is not just a collection of isolated examples. Across 22 chapter
 - **[uv](https://docs.astral.sh/uv/)** (Python package manager)
 - **[Ollama](https://ollama.ai/)** (local LLM inference)
 - **Git**
+- **GPU** (recommended): NVIDIA RTX 5080 or similar for fast Ollama inference
 
 All code runs locally. No API keys required. No data leaves your machine.
+Ollama automatically uses your GPU for inference — no configuration needed.
 
 ## Setup
 
 ```bash
-# Clone the companion repo
-git clone git@github.com:ZapAGI/god-in-the-loop-code.git
-cd god-in-the-loop-code
+# Clone the repo and switch to the 7-agent branch
+git clone git@github.com:ZapAGI/loopagi.git
+cd loopagi
+git checkout book/v1-7-agents
 
 # Install dependencies
 uv sync
 
-# Pull required Ollama models
+# Install dev dependencies (pytest, ruff)
+uv sync --extra dev
+
+# Pull the default Ollama model
 ollama pull llama3.2
+
+# (Optional) Pull additional models for better performance
+ollama pull qwen3:8b
+ollama pull qwen2.5-coder:14b
 ollama pull nomic-embed-text
 ```
 
 ## Running Examples
 
-Each chapter has its own directory with a `README.md` and self-contained scripts:
+Each chapter has its own directory with self-contained scripts:
 
 ```bash
 # Run a chapter example
-uv run python chapter-01/shannon_entropy.py
+uv run python chapter-04/first_agent.py
 
 # Run a Jupyter notebook (install optional deps first)
 uv sync --extra notebooks
@@ -83,15 +108,47 @@ uv run jupyter lab
 
 ## Running the Capstone
 
-After completing all chapters, run the full LoopAGI system:
-
 ```bash
-# Interactive CLI
+# Interactive CLI (7 agents, keyword routing)
 uv run loopagi
 
-# Or run directly
-uv run python -m loopagi.cli
+# Specify a model (any Ollama model)
+uv run loopagi --model qwen3:8b
+
+# Careful mode (requires approval for tool actions)
+uv run loopagi --mode careful
+
+# Verbose logging (see routing decisions, agent invocations)
+uv run loopagi --verbose
 ```
+
+## Running Tests
+
+```bash
+# Run all tests (1200+ tests)
+uv run python -m pytest tests/ --ignore=tests/test_eval_improved.py -v
+
+# Run just the core capstone tests
+uv run python -m pytest tests/test_agent.py tests/test_router.py tests/test_tools.py -v
+
+# Run with short output
+uv run python -m pytest tests/ --ignore=tests/test_eval_improved.py -q
+```
+
+## GPU Notes (NVIDIA RTX 5080)
+
+Ollama handles GPU allocation automatically. Verify GPU is being used:
+
+```bash
+# Check Ollama is using your GPU
+nvidia-smi   # Should show ollama_llama_server using GPU memory
+ollama list   # Shows available models
+```
+
+For 16GB VRAM (RTX 5080), recommended model sizes:
+- **14b models** (qwen2.5-coder:14b, qwen3:14b): ~9GB VRAM, fits comfortably
+- **8b models** (qwen3:8b): ~5GB VRAM, fastest inference
+- **2b models** (llama3.2): ~2GB VRAM, good for testing
 
 ---
 
@@ -152,7 +209,7 @@ god-in-the-loop-code/
   chapter-23/               # Emergence thesis: complexity simulations
   chapter-24/               # Capstone assembly: the complete LoopAGI
 
-  tests/                    # 582 tests for all capstone modules
+  tests/                    # 1200+ tests for all capstone modules
   pyproject.toml
   README.md
 ```
