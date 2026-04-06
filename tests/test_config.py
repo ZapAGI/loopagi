@@ -26,7 +26,7 @@ def test_voice_config_defaults():
     vc = VoiceConfig()
     assert vc.enabled is False
     assert vc.stt_model == "base.en"
-    assert vc.stt_device == "cpu"
+    assert vc.stt_device == "auto"
     assert vc.tts_voice == "en_US-lessac-medium"
 
 

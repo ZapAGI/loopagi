@@ -31,9 +31,16 @@ def test_listener_defaults():
 
 def test_listener_init():
     """Listener should initialize without loading model."""
-    listener = Listener(model_size="tiny.en")
+    listener = Listener(model_size="tiny.en", device="cpu", compute_type="int8")
     assert listener.model_size == "tiny.en"
+    assert listener.device == "cpu"
     assert listener._model is None  # lazy loaded
+
+
+def test_listener_auto_detect():
+    """Listener with 'auto' device should resolve to cpu or cuda."""
+    listener = Listener(model_size="tiny.en")
+    assert listener.device in ("cpu", "cuda")
 
 
 def test_listener_agent_init():

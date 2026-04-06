@@ -50,7 +50,7 @@ class VoiceConfig:
 
     enabled: bool = False
     stt_model: str = "base.en"
-    stt_device: str = "cpu"
+    stt_device: str = "auto"
     tts_voice: str = "en_US-lessac-medium"
 
 

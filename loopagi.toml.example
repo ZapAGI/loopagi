@@ -8,7 +8,7 @@ mode = "turbo"           # "turbo" (autonomous) or "careful" (approval required)
 [voice]
 enabled = false          # Enable voice I/O (requires faster-whisper + piper-tts)
 stt_model = "base.en"    # Whisper model size: tiny.en, base.en, small.en, medium.en
-stt_device = "cpu"       # "cpu" or "cuda"
+stt_device = "auto"      # "auto" (detect GPU), "cpu", or "cuda"
 tts_voice = "en_US-lessac-medium"  # Piper voice model
 
 [routing]

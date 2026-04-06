@@ -2,6 +2,9 @@
 
 **Working Python code for every chapter of *God in the Loop: Consciousness, Control, and the Architecture of Artificial General Intelligence* by Alexandros Karales.**
 
+> **Branch: `book/v2-13-agents`** — Full 13-agent system with voice I/O, TOML config, and 3-phase routing.
+> For the 7-agent tutorial capstone (Volume 1), see branch `book/v1-7-agents`.
+
 ---
 
 ## The Capstone: LoopAGI
@@ -46,22 +49,21 @@ This repository is not just a collection of isolated examples. Across 22 chapter
 
 | Chapter | LoopAGI Module | What You Build |
 |---------|---------------|----------------|
-| 4 | `loopagi/agent.py` | Base Agent class with Ollama LLM |
-| 5 | `loopagi/router.py` | Hierarchical routing (Master to Workers) |
-| 6 | `loopagi/pool.py` | Agent pools for parallel execution |
-| 7 | `loopagi/pipeline.py` | Quality pipeline (plan/code/test/review) |
-| 8 | `loopagi/memory.py` | Persistent memory with Qdrant vectors |
-| 9 | `loopagi/rag.py` | RAG-powered knowledge retrieval |
-| 10 | `loopagi/context.py` | Context engine (rules, actions, repo map) |
-| 11 | `loopagi/modes.py` | Execution modes (Zap/Careful) |
-| 12 | `loopagi/safety.py` | Command safety checker and trust scoring |
-| 13 | `loopagi/events.py` | Event bus and background agents |
-| 14 | `loopagi/careful.py` | Careful mode approval workflows |
-| 18 | `loopagi/session.py` | Session-as-git provenance logging |
-| 19 | `loopagi/tools.py` | Tool integration (shell, files, Docker) |
+| 4 | `loopagi/core/agent.py` | Base Agent class with Ollama LLM |
+| 5 | `loopagi/core/router.py` | 3-phase routing (keyword → embedding → LLM) |
+| 6 | `loopagi/core/pool.py` | Agent pools for parallel execution |
+| 7 | `loopagi/core/pipeline.py` | Quality pipeline (plan/code/test/review) |
+| 8 | `loopagi/knowledge/memory.py` | Persistent memory with Qdrant vectors |
+| 9 | `loopagi/knowledge/rag.py` | RAG-powered knowledge retrieval |
+| 10 | `loopagi/knowledge/context.py` | Context engine (rules, actions, repo map) |
+| 11 | `loopagi/safety/modes.py` | Execution modes (Turbo/Careful) |
+| 12 | `loopagi/safety/checker.py` | Command safety checker and trust scoring |
+| 13 | `loopagi/core/events.py` | Event bus and background agents |
+| 14 | `loopagi/safety/careful.py` | Careful mode approval workflows |
+| 18 | `loopagi/core/session.py` | Session-as-git provenance logging |
+| 19 | `loopagi/tools/base.py` | Tool integration (shell, file, registry) |
 | 21 | `loopagi/arc/` | ARC-AGI reasoning engine (5 specialists) |
-| 22 | `loopagi/cli.py` | Emergence thesis simulations |
-| 23 | `loopagi/cli.py` | Final CLI that assembles everything |
+| 22 | `loopagi/cli.py` | Final CLI that assembles everything |
 
 ---
 
@@ -71,39 +73,46 @@ This repository is not just a collection of isolated examples. Across 22 chapter
 - **[uv](https://docs.astral.sh/uv/)** (Python package manager)
 - **[Ollama](https://ollama.ai/)** (local LLM inference)
 - **Git**
+- **GPU** (recommended): NVIDIA RTX 5080 or similar for fast Ollama inference
 
 All code runs locally. No API keys required. No data leaves your machine.
+Ollama automatically uses your GPU for inference — no configuration needed.
 
 ## Setup
 
 ```bash
-# Clone the companion repo
+# Clone the repo and switch to the 13-agent branch
 git clone git@github.com:ZapAGI/loopagi.git
 cd loopagi
+git checkout book/v2-13-agents
 
 # Install dependencies
 uv sync
+
+# Install dev dependencies (pytest, ruff)
+uv sync --extra dev
 
 # Pull required Ollama models
 ollama pull llama3.2
 ollama pull qwen2.5-coder:14b
 ollama pull qwen3:14b
 ollama pull qwen3:8b
+ollama pull nomic-embed-text
 
-# Optional: install voice dependencies
+# Optional: install voice dependencies (STT + TTS)
 uv sync --extra voice
 
-# Optional: copy and customize config
+# Optional: copy and customize per-agent model config
 cp loopagi.toml.example loopagi.toml
 ```
 
 ## Running Examples
 
-Each chapter has its own directory with a `README.md` and self-contained scripts:
+Each chapter has its own directory with self-contained scripts:
 
 ```bash
 # Run a chapter example
-uv run python chapter-01/shannon_entropy.py
+uv run python chapter-04/first_agent.py
 
 # Run a Jupyter notebook (install optional deps first)
 uv sync --extra notebooks
@@ -112,24 +121,81 @@ uv run jupyter lab
 
 ## Running the Capstone
 
-After completing all chapters, run the full LoopAGI system:
-
 ```bash
 # Interactive CLI (13 agents, 3-phase routing)
 uv run loopagi
 
-# Specify a model
+# Specify a model (any Ollama model)
 uv run loopagi --model qwen3:14b
 
-# Careful mode (requires approval for actions)
+# Careful mode (requires approval for tool actions)
 uv run loopagi --mode careful
 
 # Voice mode (requires faster-whisper + piper-tts)
 uv run loopagi --voice
 
-# Verbose logging
+# Verbose logging (see routing decisions, agent invocations)
 uv run loopagi --verbose
+
+# Combine flags
+uv run loopagi --model qwen3:14b --mode careful --voice --verbose
 ```
+
+## Running Tests
+
+```bash
+# Run the 13-agent specific tests (57 tests)
+uv run python -m pytest tests/test_debugger.py tests/test_documenter.py \
+  tests/test_knowledge_agent.py tests/test_memory_agent.py \
+  tests/test_listener.py tests/test_speaker.py \
+  tests/test_config.py tests/test_routing_3phase.py -v
+
+# Run all tests (1200+ tests)
+uv run python -m pytest tests/ --ignore=tests/test_eval_improved.py -v
+
+# Run with short output
+uv run python -m pytest tests/ --ignore=tests/test_eval_improved.py -q
+```
+
+## TOML Configuration
+
+Copy `loopagi.toml.example` to `loopagi.toml` to customize per-agent models:
+
+```toml
+[loopagi]
+model = "qwen3:14b"     # Default model for all agents
+mode = "turbo"
+
+[voice]
+enabled = false
+stt_device = "auto"      # auto-detects GPU (cuda) or falls back to cpu
+
+[agents.coder]
+model = "qwen2.5-coder:14b"
+temperature = 0.3
+
+[agents.reviewer]
+model = "qwen3:14b"
+enabled = true
+```
+
+## GPU Notes (NVIDIA RTX 5080)
+
+Ollama handles GPU allocation automatically. Verify GPU is being used:
+
+```bash
+# Check Ollama is using your GPU
+nvidia-smi   # Should show ollama_llama_server using GPU memory
+ollama list   # Shows available models
+```
+
+For 16GB VRAM (RTX 5080), recommended model sizes:
+- **14b models** (qwen2.5-coder:14b, qwen3:14b): ~9GB VRAM, fits comfortably
+- **8b models** (qwen3:8b): ~5GB VRAM, fastest inference
+- **2b models** (llama3.2): ~2GB VRAM, good for testing
+
+Voice STT (faster-whisper) auto-detects your GPU and uses CUDA when available.
+No manual `device="cuda"` configuration needed.
 
 ---
 
@@ -201,7 +267,8 @@ loopagi/
   chapter-23/               # Emergence thesis: complexity simulations
   chapter-24/               # Capstone assembly: the complete LoopAGI
 
-  tests/                    # 582 tests for all capstone modules
+  loopagi.toml.example      # Per-agent model configuration template
+  tests/                    # 1200+ tests for all capstone modules
   pyproject.toml
   README.md
 ```

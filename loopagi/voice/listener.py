@@ -29,6 +29,20 @@ DEFAULT_CHANNELS = 1
 DEFAULT_DTYPE = "int16"
 
 
+def _detect_device() -> tuple[str, str]:
+    """Auto-detect best device and compute type for faster-whisper."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            logger.info("GPU detected: %s", gpu_name)
+            return "cuda", "float16"
+    except ImportError:
+        pass
+    return "cpu", "int8"
+
+
 class ListenerError(Exception):
     """Raised when voice input fails."""
 
@@ -39,14 +53,19 @@ class Listener:
 
     Captures audio from the default microphone and transcribes
     it using a local Whisper model. No internet required.
+    Auto-detects GPU (CUDA) for faster inference.
     """
 
     def __init__(
         self,
         model_size: str = DEFAULT_MODEL_SIZE,
-        device: str = "cpu",
-        compute_type: str = "int8",
+        device: str = "auto",
+        compute_type: str = "auto",
     ) -> None:
+        if device == "auto" or compute_type == "auto":
+            detected_device, detected_compute = _detect_device()
+            device = detected_device if device == "auto" else device
+            compute_type = detected_compute if compute_type == "auto" else compute_type
         self.model_size = model_size
         self.device = device
         self.compute_type = compute_type
